@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>タイトル</title>
+    <link rel="stylesheet" type="text/css" href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css" />
+    <style>
+        #param_table {
+            border-collapse: collapse;
+        }
+
+        #param_table,
+        #param_table th,
+        #param_table td {
+            border: 4px transparent solid;
+        }
+
+        #select_start_year {
+            width: 100px;
+            height: 40px;
+        }
+
+        #select_start_month {
+            width: 70px;
+            height: 40px;
+        }
+
+        #result,
+        #result th,
+        #result td {
+            border: 1px black solid;
+        }
+
+        #result thead {
+            visibility: collapse;
+        }
+
+        #result .th_sub {
+            background-color: #f8f8f8;
+            font-weight: normal;
+        }
+
+        #result_summery,
+        #result_table {
+            visibility: collapse;
+        }
+
+        #result_csv textarea {
+            width: 100%;
+            height: 500px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="main-container">
+        <table id="param_table">
+            <tbody>
+                <tr>
+                    <td>年利</td>
+                    <td><input name="nenri" type="number" min="0" max="29.2" step="0.01" value="2.0" />%</td>
+                </tr>
+                <tr>
+                    <td>借入額</td>
+                    <td><input name="kariire" type="text" min="0" max="10000000000" step="10000" value="10000000" />円</td>
+                </tr>
+                <tr>
+                    <td>返済開始月</td>
+                    <td><select id="select_start_year"></select>年<select id="select_start_month"></select>月</td>
+                </tr>
+                <tr>
+                    <td>毎月返済額</td>
+                    <td><input name="monthly_hensai" type="text" min="0" max="10000000000" step="1000" value="90000" />円</td>
+                </tr>
+            </tbody>
+        </table>
+        <p><input name="simu_button" type="button" value="シミュレートする" /></p>
+        <div id="result_summery">
+        </div>
+        <div id="result_table">
+            <h2>結果の詳細</h2>
+            <table id="result">
+                <thead>
+                    <tr>
+                        <th>年月</th>
+                        <th>支払い金額[円]<br />(A)+(B)</th>
+                        <th class="th_sub">元金返済額[円]<br />(A)</th>
+                        <th class="th_sub">金利[円]<br />(B)</th>
+                        <th>残高（金利除く）[円]</th>
+                    </tr>
+                </thead>
+                <tbody>
+
+                </tbody>
+            </table>
+        </div>
+        <div id="result_csv">
+            <h2>結果の詳細（CSV形式）</h2>
+            <textarea></textarea>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
+        crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/js/bootstrap.min.js" integrity="sha384-B0UglyR+jN6CkvvICOB2joaf5I4l3gm9GU6Hc1og6Ls7i6U/mkkaduKaBhlAXv9k"
+        crossorigin="anonymous"></script>
+    <script src="https://slash-mochi.net/slash-mochi-libs/mask-money/jquery.maskMoney.min.js"></script>
+    <script>
+        function Simulate(nenri, kariire, startMonth, monthlyHensai) {
+            if (Math.floor(kariire * nenri / 100.0 / 12.0) >= monthlyHensai) {
+                return null;
+            }
+
+            var output = [];
+            var zandaka = kariire;
+            var maxMonthCount = 100 * 12;
+            var iMonth = 0;
+
+            for (var currentMonth = startMonth; zandaka > 0; currentMonth.setMonth(currentMonth.getMonth() + 1)) {
+                var kinriBun = Math.floor(zandaka * nenri / 100.0 / 12.0);
+                var gankinBun = monthlyHensai - kinriBun;
+                var endZandakaBun = (zandaka - gankinBun > 0) ? (zandaka - gankinBun) : 0;
+
+                output.push({
+                    month: new Date(currentMonth.getFullYear(), currentMonth.getMonth()),
+                    startZandaka: zandaka,
+                    hensai: (zandaka < monthlyHensai) ? zandaka : monthlyHensai,
+                    kinri: kinriBun,
+                    gankin: gankinBun,
+                    endZandaka: endZandakaBun
+                });
+
+                zandaka = endZandakaBun;
+                if (++iMonth === maxMonthCount) {
+                    break;
+                }
+            }
+
+            return output;
+        }
+
+        function GetTotalHensai(resultData) {
+            var output = 0;
+
+            resultData.forEach((r) => {
+                output += r.hensai;
+            });
+
+            return output;
+        }
+
+        function GetTotalKinri(resultData) {
+            var output = 0;
+
+            resultData.forEach((r) => {
+                output += r.kinri;
+            });
+
+            return output;
+        }
+
+        function GetStartMonth(resultData) {
+            return resultData[0].month;
+        }
+
+        function GetLastMonth(resultData) {
+            return resultData[resultData.length - 1].month;
+        }
+
+        function GetSpan(monthFrom, monthTo) {
+            var y1 = monthFrom.getFullYear();
+            var y2 = monthTo.getFullYear();
+            var m1 = monthFrom.getMonth();
+            var m2 = monthTo.getMonth();
+
+            var output_y = 0;
+            var output_m = 0;
+
+            if (m1 > m2) {
+                output_y = y2 - y1 - 1;
+                output_m = m2 - m1 + 12;
+            } else {
+                output_y = y2 - y1;
+                output_m = m2 - m1;
+            }
+
+            return new Date(output_y, output_m);
+        }
+
+        function UpdateResult(resultData) {
+            $('#result_summery').css('visibility', 'visible');
+            $('#result thead').css('visibility', 'visible');
+            $('#result_table').css('visibility', 'visible');
+
+            var $resultSummery = $('#result_summery');
+            $resultSummery.empty();
+            // var $resultStart = $('#result_start');
+            // $resultStart.empty();
+            var $result = $('#result tbody');
+            $result.empty();
+
+            var totalKinriPerGankin = 100.0 * GetTotalKinri(resultData) / resultData[0].startZandaka;
+            var totalKinriPerHensai = 100.0 * GetTotalKinri(resultData) / GetTotalHensai(resultData);
+            var startMonth = GetStartMonth(resultData);
+            var lastMonth = GetLastMonth(resultData);
+            var span = GetSpan(startMonth, lastMonth);
+
+            $resultSummery.append($('<h2/>').text('結果の概要'));
+            $resultSummery
+                .append($('<p/>')
+                    .addClass('has-background')
+                    .addClass('has-very-light-gray-background-color')
+                    .text('' + resultData[0].startZandaka.toLocaleString() + '円の借金をしました。'));
+            $resultSummery
+                .append($('<p/>')
+                    .addClass('has-background')
+                    .addClass('has-very-light-gray-background-color')
+                    .text('この借金に対して、' + GetTotalHensai(resultData).toLocaleString() + '円の返済を行いました。'));
+            $resultSummery
+                .append($('<p/>')
+                    .addClass('has-background')
+                    .addClass('has-very-light-gray-background-color')
+                    .text('支払った金利の合計額は' + GetTotalKinri(resultData).toLocaleString() + '円です。'));
+            $resultSummery
+                .append($('<p/>')
+                    .addClass('has-background')
+                    .addClass('has-very-light-gray-background-color')
+                    .text('この金利は、元金' + resultData[0].startZandaka.toLocaleString() + '円の' + totalKinriPerGankin + '%の金額です。'));
+            $resultSummery
+                .append($('<p/>')
+                    .addClass('has-background')
+                    .addClass('has-very-light-gray-background-color')
+                    .text('この金利は、返済額' + GetTotalHensai(resultData).toLocaleString() + '円の' + totalKinriPerHensai + '%の金額です。'));
+            $resultSummery
+                .append($('<p/>')
+                    .addClass('has-background')
+                    .addClass('has-very-light-gray-background-color')
+                    .text('返済は、' + startMonth.getFullYear() + '年' + (startMonth.getMonth() + 1) + '月から' + lastMonth.getFullYear() + '年' + (lastMonth.getMonth() + 1) + '月まで' + (span.getFullYear() - 1900) + '年と' + (span.getMonth() + 1) + 'ヶ月かけて行いました。'));
+
+            resultData.forEach((r) => {
+                $result.append(
+                    $('<tr/>')
+                        .append([
+                            $('<td/>')
+                                .text('' + r.month.getFullYear() + '年' + (r.month.getMonth() + 1) + '月'),
+                            $('<td/>')
+                                .text(r.hensai.toLocaleString()),
+                            $('<td/>')
+                                .text(r.gankin.toLocaleString()),
+                            $('<td/>')
+                                .text(r.kinri.toLocaleString()),
+                            $('<td/>')
+                                .text(r.endZandaka.toLocaleString())
+                        ])
+                );
+            });
+        }
+
+        $(() => {
+            var now = new Date();
+            for (var y = 1950; y < 2100; y++) {
+                $('#select_start_year')
+                    .append(
+                        $('<option/>')
+                            .val('' + y)
+                            .text('' + y + '年')
+                    );
+
+                $('#select_start_year option[value=' + now.getFullYear() + ']').attr('selected', '');
+            }
+            for (var m = 1; m <= 12; m++) {
+                $('#select_start_month')
+                    .append(
+                        $('<option/>')
+                            .val('' + m)
+                            .text('' + m + '月')
+                    );
+
+                $('#select_start_month option[value=' + (now.getMonth() + 1) + ']').attr('selected', '');
+            }
+
+            $('input[name=kariire], input[name=monthly_hensai]').maskMoney({
+                thousands: ',',
+                allowZero: true,
+                precision: '0'
+            });
+            $('input[name=kariire], input[name=monthly_hensai]').maskMoney('mask');
+
+            $('input[name=simu_button]').on('click', (e) => {
+                // 年利[%]
+                var nenri = Number($('input[name=nenri]').val());
+
+                // 借入額[円]
+                var kariire = Number($('input[name=kariire]').val().replace(/,/g, ''));
+
+                // 返済開始月
+                var startMonth = new Date(
+                    Number($('#select_start_year').val()),
+                    Number($('#select_start_month').val()) - 1
+                )
+
+                // 毎月返済額
+                var monthlyHensai = Number($('input[name=monthly_hensai]').val().replace(/,/g, ''));
+
+                var resultData = Simulate(nenri, kariire, startMonth, monthlyHensai);
+                if (resultData === null) {
+                    alert('返済額より金利の方が高いじゃん！');
+                    return;
+                }
+                UpdateResult(resultData);
+            });
+        });
+    </script>
+</body>
+
+</html>
