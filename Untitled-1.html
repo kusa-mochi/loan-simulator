@@ -125,7 +125,7 @@
                 output.push({
                     month: new Date(currentMonth.getFullYear(), currentMonth.getMonth()),
                     startZandaka: zandaka,
-                    hensai: (zandaka < monthlyHensai) ? zandaka : monthlyHensai,
+                    hensai: (zandaka < monthlyHensai) ? (zandaka + kinriBun) : monthlyHensai,
                     kinri: kinriBun,
                     gankin: gankinBun,
                     endZandaka: endZandakaBun
