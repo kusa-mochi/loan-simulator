@@ -226,12 +226,12 @@
                 .append($('<p/>')
                     .addClass('has-background')
                     .addClass('has-very-light-gray-background-color')
-                    .text('この金利は、元金' + resultData[0].startZandaka.toLocaleString() + '円の' + totalKinriPerGankin + '%の金額です。'));
+                    .text('この金利は、元金' + resultData[0].startZandaka.toLocaleString() + '円の' + totalKinriPerGankin.toFixed(3) + '%の金額です。'));
             $resultSummery
                 .append($('<p/>')
                     .addClass('has-background')
                     .addClass('has-very-light-gray-background-color')
-                    .text('この金利は、返済額' + GetTotalHensai(resultData).toLocaleString() + '円の' + totalKinriPerHensai + '%の金額です。'));
+                    .text('この金利は、返済額' + GetTotalHensai(resultData).toLocaleString() + '円の' + totalKinriPerHensai.toFixed(3) + '%の金額です。'));
             $resultSummery
                 .append($('<p/>')
                     .addClass('has-background')
