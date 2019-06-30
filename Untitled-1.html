@@ -3,7 +3,8 @@
 
 <head>
     <title>タイトル</title>
-    <link rel="stylesheet" type="text/css" href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css" />
+    <link rel="stylesheet" type="text/css"
+        href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css" />
     <style>
         #param_table {
             border-collapse: collapse;
@@ -41,13 +42,15 @@
         }
 
         #result_summery,
-        #result_table {
+        #result_table,
+        #result_csv_pre,
+        #result_csv {
             visibility: collapse;
         }
 
-        #result_csv textarea {
-            width: 100%;
-            height: 500px;
+        #result_csv a,
+        #result_csv_pre a {
+            font-size: 24px;
         }
     </style>
 </head>
@@ -63,7 +66,8 @@
                 </tr>
                 <tr>
                     <td>借入額</td>
-                    <td><input name="kariire" type="text" min="0" max="10000000000" step="10000" value="10000000" />円</td>
+                    <td><input name="kariire" type="text" min="0" max="10000000000" step="10000" value="10000000" />円
+                    </td>
                 </tr>
                 <tr>
                     <td>返済開始月</td>
@@ -71,7 +75,8 @@
                 </tr>
                 <tr>
                     <td>毎月返済額</td>
-                    <td><input name="monthly_hensai" type="text" min="0" max="10000000000" step="1000" value="90000" />円</td>
+                    <td><input name="monthly_hensai" type="text" min="0" max="10000000000" step="1000" value="90000" />円
+                    </td>
                 </tr>
             </tbody>
         </table>
@@ -80,6 +85,9 @@
         </div>
         <div id="result_table">
             <h2>結果の詳細</h2>
+            <div id="result_csv_pre">
+                CSV形式にまとめた結果の詳細は<a id="link_result_csv_pre" download="loan_simu.csv" href="#">こちら</a>。
+            </div>
             <table id="result">
                 <thead>
                     <tr>
@@ -96,14 +104,14 @@
             </table>
         </div>
         <div id="result_csv">
-            <h2>結果の詳細（CSV形式）</h2>
-            <textarea></textarea>
+            CSV形式にまとめた結果の詳細は<a id="link_result_csv" download="loan_simu.csv" href="#">こちら</a>。
         </div>
     </div>
 
-    <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
-        crossorigin="anonymous"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/js/bootstrap.min.js" integrity="sha384-B0UglyR+jN6CkvvICOB2joaf5I4l3gm9GU6Hc1og6Ls7i6U/mkkaduKaBhlAXv9k"
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js"
+        integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/js/bootstrap.min.js"
+        integrity="sha384-B0UglyR+jN6CkvvICOB2joaf5I4l3gm9GU6Hc1og6Ls7i6U/mkkaduKaBhlAXv9k"
         crossorigin="anonymous"></script>
     <script src="https://slash-mochi.net/slash-mochi-libs/mask-money/jquery.maskMoney.min.js"></script>
     <script>
@@ -192,6 +200,8 @@
             $('#result_summery').css('visibility', 'visible');
             $('#result thead').css('visibility', 'visible');
             $('#result_table').css('visibility', 'visible');
+            $('#result_csv').css('visibility', 'visible');
+            $('#result_csv_pre').css('visibility', 'visible');
 
             var $resultSummery = $('#result_summery');
             $resultSummery.empty();
@@ -199,6 +209,7 @@
             // $resultStart.empty();
             var $result = $('#result tbody');
             $result.empty();
+            var resultCsvString = '';
 
             var totalKinriPerGankin = 100.0 * GetTotalKinri(resultData) / resultData[0].startZandaka;
             var totalKinriPerHensai = 100.0 * GetTotalKinri(resultData) / GetTotalHensai(resultData);
@@ -238,6 +249,7 @@
                     .addClass('has-very-light-gray-background-color')
                     .text('返済は、' + startMonth.getFullYear() + '年' + (startMonth.getMonth() + 1) + '月から' + lastMonth.getFullYear() + '年' + (lastMonth.getMonth() + 1) + '月まで' + (span.getFullYear() - 1900) + '年と' + (span.getMonth() + 1) + 'ヶ月かけて行いました。'));
 
+            resultCsvString = '年月,支払い金額[円],元金返済額[円],金利[円],残高（金利除く）[円]\n';
             resultData.forEach((r) => {
                 $result.append(
                     $('<tr/>')
@@ -254,7 +266,16 @@
                                 .text(r.endZandaka.toLocaleString())
                         ])
                 );
+                resultCsvString += '' + r.month.getFullYear() + '/' + (r.month.getMonth() + 1) + ','
+                    + r.hensai + ','
+                    + r.gankin + ','
+                    + r.kinri + ','
+                    + r.endZandaka + '\n';
             });
+
+            $('#link_result_csv,#link_result_csv_pre').on('click', (e) => e.target.href = URL.createObjectURL(new Blob([resultCsvString], {
+                type: "text/plain"
+            })));
         }
 
         $(() => {
